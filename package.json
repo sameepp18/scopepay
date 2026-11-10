@@ -1,0 +1,7 @@
+{
+  "name": "scopepay", "version": "1.0.0", "private": true, "type": "module",
+  "description": "Scope agreements, conversational client revisions, and PayPal sandbox Checkout",
+  "engines": {"node": ">=22"},
+  "scripts": {"start": "node server.mjs", "test": "node --test", "check": "node scripts/check.mjs", "package": "node scripts/package.mjs"},
+  "license": "MIT"
+}
