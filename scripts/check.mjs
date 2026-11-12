@@ -4,7 +4,15 @@ import {PayPal} from '../lib/paypal.mjs';
 
 export async function checkCredentials(c,{fetch:fetcher=fetch}={}) {
   const results=[];
-  if(!c.anthropicKey) results.push({service:'Claude',ok:false,message:'Add ANTHROPIC_API_KEY.'});
+  if(c.aiProvider==='groq'){
+    if(!c.groqKey) results.push({service:'Groq',ok:false,message:'Add GROQ_API_KEY (free at console.groq.com/keys).'});
+    else try {
+      const r=await fetcher('https://api.groq.com/openai/v1/chat/completions',{method:'POST',headers:{Authorization:`Bearer ${c.groqKey}`,'content-type':'application/json'},body:JSON.stringify({model:c.model,max_tokens:8,messages:[{role:'user',content:'Reply OK.'}]}),signal:AbortSignal.timeout(20000)});
+      if(!r.ok) throw Error(r.status===401||r.status===403?'Groq rejected the API key.':r.status===404?`Groq does not offer model ${c.model}; set AI_MODEL.`:`Groq returned HTTP ${r.status}; try again shortly.`);
+      const j=await r.json();if(!j.choices?.length)throw Error('Groq returned an unexpected response.');
+      results.push({service:'Groq',ok:true,message:`Key and model ${c.model} responded.`});
+    } catch(e) {results.push({service:'Groq',ok:false,message:e.message.startsWith('Groq ')?e.message:'Groq connection failed; check network access.'});}
+  } else if(!c.anthropicKey) results.push({service:'Claude',ok:false,message:'Add ANTHROPIC_API_KEY.'});
   else try {
     const r=await fetcher('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'x-api-key':c.anthropicKey,'anthropic-version':c.anthropicVersion||'2023-06-01','content-type':'application/json'},body:JSON.stringify({model:c.model,max_tokens:8,messages:[{role:'user',content:'Reply OK.'}]}),signal:AbortSignal.timeout(20000)});
     if(!r.ok) throw Error(r.status===401||r.status===403?'Claude rejected the API key.':`Claude returned HTTP ${r.status}; check model access and credit.`);
@@ -17,7 +25,7 @@ export async function checkCredentials(c,{fetch:fetcher=fetch}={}) {
   return results;
 }
 if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href){
-  console.log('Checks make a tiny billable Claude request and PayPal authentication only.');
+  console.log('Checks make a tiny model request and PayPal authentication only.');
   const results=await checkCredentials(await loadConfig());
   for(const r of results)console.log(`${r.ok?'OK':'NOT READY'} — ${r.service}: ${r.message}`);
   if(results.some(r=>!r.ok))process.exitCode=1;
