@@ -1,0 +1,11 @@
+import {execFileSync} from 'node:child_process';
+import {fileURLToPath} from 'node:url';
+import {resolve,dirname} from 'node:path';
+const cwd=resolve(dirname(fileURLToPath(import.meta.url)),'..');
+const git=(...args)=>execFileSync('git',args,{cwd,encoding:'utf8'}).trim();
+if(git('status','--porcelain'))throw Error('Commit reviewed changes before packaging.');
+const files=git('ls-files').split('\n');
+if(files.some(p=>p.startsWith('data/')||p.startsWith('node_modules/')||/(^|\/)\.env(?:\.|$)/.test(p)&&p!=='.env.example'))throw Error('Private files must not be tracked.');
+const output=resolve(cwd,'../scopepay.zip');
+git('archive','--format=zip','--prefix=scopepay/',`--output=${output}`,'HEAD');
+console.log(`Source package: ${output}`);

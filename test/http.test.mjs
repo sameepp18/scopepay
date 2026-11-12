@@ -17,7 +17,8 @@ test('complete HTTP demo flow compares, publishes, negotiates, consents and pays
  r=await post(`/api/desk/projects/${p.id}/publish`,{message:analysis.message,items:[{id:item.id,title:item.title,price:'180',approved:true}],included:['Headline'],exclusions:[],timing:'Next week'});assert.equal(r.status,200);
  assert.equal((await fetch(base+'/api/client/'+'b'.repeat(48))).status,404);
  r=await post(`/api/client/${p.token}/negotiate`,{message:'under $200, booking matters most'});assert.equal((await r.json()).cents,18000);
- const snap=await (await post(`/api/client/${p.token}/consent`,{ids:[item.id],agreed:true,capCents:20000})).json();
+ const offerDigest=(await (await fetch(base+'/api/client/'+p.token)).json()).offer.digest;
+ const snap=await (await post(`/api/client/${p.token}/consent`,{offerDigest,ids:[item.id],agreed:true,capCents:20000})).json();
  const order=await (await post(`/api/client/${p.token}/order`,{digest:snap.digest,amount:'0.01'})).json();
  const paid=await (await post(`/api/client/${p.token}/capture`,{orderId:order.orderId,digest:snap.digest})).json();assert.equal(paid.status,'paid');assert.equal(paid.cents,18000);
  const view=await (await fetch(base+'/api/client/'+p.token)).json();assert.equal(view.payment.status,'paid');assert.ok(!JSON.stringify(view).includes('SECRET'));

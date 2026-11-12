@@ -1,0 +1,36 @@
+# Review current hosting prices before creating this paid persistent service.
+# Reference: https://render.com/docs/blueprint-spec
+services:
+  - type: web
+    name: scopepay
+    runtime: node
+    plan: starter
+    numInstances: 1
+    buildCommand: npm ci
+    startCommand: npm start
+    healthCheckPath: /healthz
+    disk:
+      name: scopepay-data
+      mountPath: /var/data
+      sizeGB: 1
+    envVars:
+      - key: NODE_VERSION
+        value: 22.19.0
+      - key: NODE_ENV
+        value: production
+      - key: HOST
+        value: 0.0.0.0
+      - key: DATA_DIR
+        value: /var/data/scopepay
+      - key: DESK_KEY
+        generateValue: true
+      - key: AI_MODE
+        value: demo
+      - key: PAYPAL_MODE
+        value: demo
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: PAYPAL_CLIENT_ID
+        sync: false
+      - key: PAYPAL_CLIENT_SECRET
+        sync: false
