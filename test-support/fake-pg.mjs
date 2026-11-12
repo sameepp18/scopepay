@@ -7,6 +7,7 @@ export function databaseFixture(){
   async connect(){}
   async query(sql,values){
    if(sql.includes('pg_try_advisory_lock')){const locked=!db.owner||db.owner===this;if(locked)db.owner=this;return {rows:[{locked}]};}
+   if(sql.includes('pg_terminate_backend')){const old=db.owner;if(old&&old!==this){db.owner=null;old.emit('error',Error('terminated by administrator'));}return {rows:[]};}
    if(sql.startsWith('CREATE TABLE'))return {rows:[]};
    if(sql.startsWith('INSERT INTO')){db.state??=JSON.parse(values[0]);return {rows:[]};}
    if(sql.startsWith('SELECT state'))return {rows:[{state:structuredClone(db.state)}]};
