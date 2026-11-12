@@ -27,3 +27,11 @@ test('a failed read probe blocks cached financial state before a socket error ar
 test('commit followed by lost acknowledgement fails closed and reloads committed payment IDs on restart',async()=>{
  const {Client,db}=databaseFixture();const s=await PostgresStore.open('private-test-url',{Client});db.loseWriteAck=true;await assert.rejects(()=>s.update(x=>{x.projects.test={orderId:'ORDER-1',captureId:'CAPTURE-1',digest:'agreed-terms'};}),/storage unavailable/i);await assert.rejects(()=>s.read(),/storage unavailable/i);await s.close();db.loseWriteAck=false;const resumed=await PostgresStore.open('private-test-url',{Client});try{assert.deepEqual((await resumed.read()).projects.test,{orderId:'ORDER-1',captureId:'CAPTURE-1',digest:'agreed-terms'});}finally{await resumed.close();}
 });
+test('opt-in takeover ends the previous owner, which then fails closed; default still refuses',async()=>{
+ const {Client}=databaseFixture();const old=await PostgresStore.open('private-test-url',{Client});
+ await assert.rejects(()=>PostgresStore.open('private-test-url',{Client}),/another|one instance/i);
+ const next=await PostgresStore.open('private-test-url',{Client,takeover:true,sleep:async()=>{}});
+ try{await next.update(x=>{x.counter=5;});assert.equal((await next.read()).counter,5);
+  await assert.rejects(()=>old.read(),/storage unavailable/i);await assert.rejects(()=>old.update(x=>{x.counter=9;}),/storage unavailable/i);
+  assert.equal((await next.read()).counter,5);}
+ finally{await next.close();await old.close();}});
