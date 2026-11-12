@@ -20,7 +20,7 @@ The client agrees to the displayed version of the terms and pays through integra
 
 ## How we built it
 
-Node.js, HTML, CSS, JavaScript, Anthropic Claude Messages API with structured output, and PayPal Orders REST API plus the PayPal JavaScript Checkout SDK. The app has no runtime package dependencies or build step. Tests use Node's built-in test runner. Render deployment configuration is included.
+Node.js, HTML, CSS, JavaScript, Anthropic Claude Messages API with structured output, and PayPal Orders REST API plus the PayPal JavaScript Checkout SDK. There is no build step. Optional PostgreSQL storage uses node-postgres; local mode uses JSON files. Tests use Node's built-in test runner. Render deployment configuration is included, including a temporary free-server/free-database option.
 
 AI interprets and writes; the freelancer approves prices; code enforces totals, budget caps and payment state. Immutable consent fingerprints, stored idempotency identifiers and read-only reconciliation support safe recovery from repeated callbacks and lost responses.
 

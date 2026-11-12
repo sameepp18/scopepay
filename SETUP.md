@@ -39,9 +39,25 @@ Do not call a simulated payment a sandbox payment. Real Claude and PayPal purcha
 
 ## 5. Hosting preparation
 
+### Free 30-day demonstration
+
+Use `render.free.yaml` or create one **Free** Node web service and one **Free** Render Postgres database in the same region. The server cannot use a persistent disk on the Free plan. Set `STORAGE_MODE=postgres` and its private `DATABASE_URL` to the database's internal connection URL; startup will reject a missing URL instead of silently using empty temporary files. Never deploy sandbox payment flows with temporary local-file storage. `pg` is installed by `npm ci`. Local runs use the JSON store by default (`STORAGE_MODE=auto` with no URL).
+
+Keep one server instance. PostgreSQL holds a session advisory lock to reject a second server, and stores the prototype's full state as one JSONB row. Every update commits before returning. Database errors fail closed: check the database, then restart the app to reload committed state; do not remove data or create a replacement empty store to clear an uncertain payment.
+
+Disable automatic deploys. Render normally overlaps old/new processes during rolling deploys, which conflicts with this prototype's exclusive database lock. Updates require downtime: stop the old instance and verify its database session has closed before starting its replacement. A replacement may use another Free web service connected to the same database; update demo links if its hostname changes. Do not remove the lock or run two copies to force a rolling update. Normal rolling-redeploy behavior has not been validated for this single-owner prototype.
+
+The free database expires **30 days after creation**, with no managed backups. The free server sleeps after 15 minutes idle, so the first visit can take about a minute. Free workspace instance-hour, bandwidth and build quotas apply and may also be shared with other services. Do not enable an automatic paid upgrade. Review Render billing limits; no plan can promise unlimited usage.
+
+Before database expiry, export it using `pg_dump` with the external connection URL kept in a private environment variable (follow Render's export instructions). Preserve an encrypted copy outside the deployment. Free-server shell access is unavailable, so run the export from your computer or another trusted environment with PostgreSQL tools installed. Do not publish the export. A free database should contain fictional sandbox records only.
+
+For external database checks use TLS with certificate validation, such as the external connection URL plus `sslmode=verify-full`. Never disable verification globally. Render's internal URL works over its private same-region network. `npm run check:storage` consumes `STORAGE_CHECK_DATABASE_URL` from the process environment and creates a separate temporary schema. Stop ScopePay first, because the check deliberately tests the same single-process lock. No database checks run as part of ordinary `npm test`.
+
+### Paid persistent-disk alternative
+
 The included `render.yaml` is a proposed single-instance Node service with a persistent disk. Review Render's current plan and disk prices before creating it; deployment can cost money. Nothing has been published by this build.
 
-For any hosted service set `HOST=0.0.0.0`, `NODE_ENV=production`, an HTTPS `PUBLIC_URL`, and a random `DESK_KEY` of at least 24 characters. Render can supply `RENDER_EXTERNAL_URL` instead of `PUBLIC_URL`. Store provider keys in the host's secret settings. Set `DATA_DIR` to a persistent private disk and run **one instance only**. Build command: `npm ci`; start command: `npm start`; health path: `/healthz`.
+For any hosted service set `HOST=0.0.0.0`, `NODE_ENV=production`, an HTTPS `PUBLIC_URL`, and a random `DESK_KEY` of at least 24 characters. Render can supply `RENDER_EXTERNAL_URL` instead of `PUBLIC_URL`. Store provider keys in the host's secret settings. For the paid file-storage option, set `DATA_DIR` to a persistent private disk. For the free database option, set `DATABASE_URL`. Run **one instance only**. Build command: `npm ci`; start command: `npm start`; health path: `/healthz` checks storage availability as well as the server.
 
 The freelancer desk requests the desk key. Keep it private; judges can use a published client link or run their own local copy. There is no public self-service signup or isolated judge account. Do not publish the desk key in the submission. Demo deployment defaults keep both modes simulated until you explicitly change them.
 
@@ -53,6 +69,6 @@ Signature verification uses PayPal's server API. Unconfigured or unverified even
 
 ## Recovery and privacy
 
-Back up `DATA_DIR` securely while the app is stopped. Never run multiple processes against it. If startup reports another process owns the lock, stop that process normally; do not delete a live lock. A crashed process's stale lock is detected on the next start. Preserve data until an uncertain payment has been reconciled with PayPal.
+For local file storage, back up `DATA_DIR` securely while the app is stopped. Never run multiple processes against it. If startup reports another process owns the lock, stop that process normally; do not delete a live lock. A crashed process's stale lock is detected on the next start. For Postgres, preserve a private database export and stop the existing server before starting a replacement; the session lock releases when its connection closes. Preserve data until an uncertain payment has been reconciled with PayPal.
 
 AI has a daily request cap (`MAX_AI_PER_DAY`, default 150) and per-client rate limits, but these reset on restart and are not a provider spending limit. Configure billing limits with the provider. Use fictional data: live AI sends agreement text and conversation to Anthropic, and payment details go to PayPal. Private client links grant access to their agreement and are not automatically revoked.

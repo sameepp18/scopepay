@@ -6,7 +6,7 @@ ScopePay compares a client's request with the original brief, cites evidence, an
 
 ## Run locally
 
-Requires Node.js 22.19 or newer and npm. No build step or runtime dependencies.
+Requires Node.js 22.19 or newer and npm. No build step. The `pg` dependency supports optional PostgreSQL storage; local runs still use JSON files by default.
 
 ```sh
 npm ci
@@ -34,12 +34,15 @@ This is a hackathon prototype for one freelancer desk, USD, one server process, 
 
 Payment is immediate capture, not escrow or a delivery guarantee. Refund handling flags review; there is no refund administration UI. A real provider transaction and model response must be verified with your own credentials before a live demo. Automated tests replace external providers. Demo AI uses a limited deterministic example and does not fall back silently when live AI fails.
 
-Data is stored in an atomic JSON file with a process lock. This supports restart recovery, not horizontal scaling or guarantees against sudden power loss. Back up the private data directory. Rate limits and desk sessions reset on restart. Hosting and AI usage may incur costs; the included Render configuration requests a paid persistent disk service and is not deployed automatically.
+Local data is stored in an atomic JSON file with a process lock. Setting `DATABASE_URL` uses PostgreSQL instead, with a session lock permitting one server and a committed JSONB record for each update. A database connection/write failure blocks further operations until restart; it never switches to empty local storage. Neither mode supports horizontal scaling. Back up private data. Rate limits and desk sessions reset on restart.
+
+`render.free.yaml` prepares a free Render server plus a free Postgres database. The database expires after 30 days and has no managed backups; the server sleeps after 15 minutes idle. Use this for a temporary fictional hackathon demo. Export data before expiry. The original `render.yaml` proposes paid persistent-disk hosting; paid deployment is not necessary for the free option. Hosting quotas and AI usage can incur costs; review account billing settings and do not enable upgrades automatically.
 
 ## Commands
 
 - `npm test`: local tests with fake external providers.
 - `npm run check`: tiny billable Claude request and PayPal OAuth authentication; no orders.
+- `npm run check:storage`: real database checks using an explicitly supplied `STORAGE_CHECK_DATABASE_URL`, while the app is stopped. Creates and removes its own test schema; does not modify application records. Never pass connection URLs in command arguments or commit them.
 - `npm run package`: archive a clean committed Git checkout to `../scopepay.zip`, excluding untracked local data and credentials. Requires Git.
 
 The public client ID is expected in the browser in sandbox mode. The PayPal secret and Anthropic key must remain on the server. No analytics, email or third-party database is configured. Live AI sends the original brief, request and negotiation context to Anthropic; use fictional data for judge demonstrations.
